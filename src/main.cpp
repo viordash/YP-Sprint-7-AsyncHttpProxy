@@ -31,20 +31,25 @@ awaitable<void> session(tcp::socket client_socket, io_service &io_service) {
 class Server {
 public:
     Server(io_service &io_service, short port)
-        : io_service_(io_service), acceptor_(io_service, tcp::endpoint(tcp::v4(), port)), socket_(io_service) {
+        : io_service_(io_service), acceptor_(io_service, tcp::endpoint(tcp::v4(), port)) {
         do_accept();
     }
 
 private:
     void do_accept() {
-        acceptor_.async_accept(socket_, [this](error_code ec) {
-            // code here
+        acceptor_.async_accept([this](error_code ec, tcp::socket socket) {
+            if (!ec) {
+                co_spawn(io_service_, session(std::move(socket), io_service_), boost::asio::detached);
+            } else {
+                std::cerr << "Accept error: " << ec.message() << std::endl;
+            }
+
+            do_accept();
         });
     }
 
     io_service &io_service_;
     tcp::acceptor acceptor_;
-    tcp::socket socket_;
 };
 
 int main(int argc, char *argv[]) {
