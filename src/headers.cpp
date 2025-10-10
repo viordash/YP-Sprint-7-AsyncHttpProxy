@@ -1,5 +1,6 @@
 #include "headers.h"
 
+#include <cctype>
 #include <ranges>
 #include <string_view>
 
@@ -32,7 +33,7 @@ void iterHeaders(std::string_view req, Callback &&callback) {
         if (colon != std::string_view::npos) {
             std::string_view name = line.substr(0, colon);
             std::string_view value = line.substr(colon + 1);
-            
+
             trim(name);
             trim(value);
 
@@ -42,8 +43,28 @@ void iterHeaders(std::string_view req, Callback &&callback) {
 }
 
 std::pair<std::string, std::string> findHostPort(std::string_view req) {
-    // code here
-    return {};
+    std::string host_name;
+    std::string port = "80";
+
+    iterHeaders(req, [&](std::string_view name, std::string_view value) {
+        if (name.length() != 4          //
+            && tolower(name[0]) != 'h'  //
+            && tolower(name[1]) != 'o'  //
+            && tolower(name[2]) != 's'  //
+            && tolower(name[3]) != 't') {
+            return;
+        }
+
+        size_t colon = value.find(':');
+        if (colon != std::string_view::npos) {
+            host_name = std::string(value.substr(0, colon));
+            port = std::string(value.substr(colon + 1));
+        } else {
+            host_name = std::string(value);
+        }
+    });
+
+    return {host_name, port};
 }
 
 std::optional<size_t> findContentLength(std::string_view rsp) {
