@@ -14,8 +14,10 @@ void iterHeaders(std::string_view req, Callback&& callback) {
 
 std::pair<std::string, std::string> findHostPort(std::string_view req) {
   // code here
+  return {};
 }
 
 std::optional<size_t> findContentLength(std::string_view rsp) {
   // code here
+  return {};
 }
