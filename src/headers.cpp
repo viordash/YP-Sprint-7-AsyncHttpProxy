@@ -1,6 +1,7 @@
 #include "headers.h"
 
 #include <cctype>
+#include <cstddef>
 #include <ranges>
 #include <string_view>
 
@@ -12,6 +13,18 @@ static void trim(std::string_view &s) {
     if (start != std::string_view::npos && end != std::string_view::npos) {
         s = s.substr(start, end - start + 1);
     }
+}
+static bool compareStrings(const std::string_view s1, const std::string_view s2) {
+    if (s1.length() != s2.length()) {
+        return false;
+    }
+
+    for (size_t i = 0; i < s1.length(); ++i) {
+        if (tolower(s1[i]) != tolower(s2[i]))
+            return false;
+    }
+
+    return true;
 }
 
 void iterHeaders(std::string_view req, Callback &&callback) {
@@ -47,11 +60,7 @@ std::pair<std::string, std::string> findHostPort(std::string_view req) {
     std::string port = "80";
 
     iterHeaders(req, [&](std::string_view name, std::string_view value) {
-        if (name.length() != 4          //
-            && tolower(name[0]) != 'h'  //
-            && tolower(name[1]) != 'o'  //
-            && tolower(name[2]) != 's'  //
-            && tolower(name[3]) != 't') {
+        if (name.length() != 4 && !compareStrings(name, "Host")) {
             return;
         }
 
@@ -68,6 +77,20 @@ std::pair<std::string, std::string> findHostPort(std::string_view req) {
 }
 
 std::optional<size_t> findContentLength(std::string_view rsp) {
-    // code here
-    return {};
+    std::optional<size_t> content_len;
+
+    iterHeaders(rsp, [&](std::string_view name, std::string_view value) {
+        if (name.length() != 4 && !compareStrings(name, "Content-Length")) {
+            return;
+        }
+
+        size_t len = 0;
+        auto [ptr, ec] = std::from_chars(value.data(), value.data() + value.size(), len);
+
+        if (ec == std::errc() && ptr == value.data() + value.size()) {
+            content_len = len;
+        }
+    });
+
+    return content_len;
 }
