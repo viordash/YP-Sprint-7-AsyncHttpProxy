@@ -22,7 +22,7 @@ TEST(iterHeaders, OnlyRequestLineNoCRLF) {
 }
 
 TEST(iterHeaders, SkipRequestLine) {
-    std::string_view req = "GET / HTTP/1.1\r\nHost: example.com\r\n\r\n";
+    std::string_view req = "GET / HTTP/1.1\r\nHost: example.com:80\r\n\r\n";
     std::vector<Header> headers;
 
     iterHeaders(req, [&](std::string_view name, std::string_view value) {
@@ -31,7 +31,7 @@ TEST(iterHeaders, SkipRequestLine) {
 
     ASSERT_EQ(headers.size(), 1);
     ASSERT_EQ(headers[0].name, "Host");
-    ASSERT_EQ(headers[0].value, "example.com");
+    ASSERT_EQ(headers[0].value, "example.com:80");
 }
 
 TEST(iterHeaders, SingleHeader) {
@@ -126,11 +126,48 @@ TEST(iterHeaders, HeaderWithSpacesInValue) {
 }
 
 TEST(findHostPort, Simple) {
-    // code here
+    std::string_view req = "GET / HTTP/1.1\r\n"
+                           "Host: example.com:443\r\n"
+                           "User-Agent: TestClient\r\n"
+                           "\r\n";
+    auto [host, port] = findHostPort(req);
+    ASSERT_EQ(host, "example.com");
+    ASSERT_EQ(port, "443");
 }
 
 TEST(findHostPort, NoHost) {
-    // code here
+    std::string_view req = "GET / HTTP/1.1\r\n"
+                           "User-Agent: TestClient\r\n"
+                           "\r\n";
+    auto [host, port] = findHostPort(req);
+    ASSERT_TRUE(host.empty());
+    ASSERT_EQ(port, "80");
+}
+
+TEST(findHostPort, HostCaseInsensitive) {
+    std::string_view req_lower = "GET / HTTP/1.1\r\nhost: lower.com\r\n\r\n";
+    auto [host_lower, port_lower] = findHostPort(req_lower);
+    ASSERT_EQ(host_lower, "lower.com");
+    ASSERT_EQ(port_lower, "80");
+
+    std::string_view req_mixed = "GET / HTTP/1.1\r\nHosT: mixed.com:9000\r\n\r\n";
+    auto [host_mixed, port_mixed] = findHostPort(req_mixed);
+    ASSERT_EQ(host_mixed, "mixed.com");
+    ASSERT_EQ(port_mixed, "9000");
+}
+
+TEST(findHostPort, OnlyRequestLine) {
+    std::string_view req = "GET / HTTP/1.1\r\n\r\n";
+    auto [host, port] = findHostPort(req);
+    ASSERT_TRUE(host.empty());
+    ASSERT_EQ(port, "80");
+}
+
+TEST(findHostPort, EmptyRequest) {
+    std::string_view req = "";
+    auto [host, port] = findHostPort(req);
+    ASSERT_TRUE(host.empty());
+    ASSERT_EQ(port, "80");
 }
 
 TEST(findContentLength, Simple) {
