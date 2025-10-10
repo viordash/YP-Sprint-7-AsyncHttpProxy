@@ -171,9 +171,62 @@ TEST(findHostPort, EmptyRequest) {
 }
 
 TEST(findContentLength, Simple) {
-    // code here
+    std::string_view resp = "HTTP/1.1 200 OK\r\n"
+                            "Content-Length: 12345\r\n"
+                            "\r\n"
+                            "<body>...</body>";
+    std::optional<size_t> length = findContentLength(resp);
+    ASSERT_TRUE(length.has_value());
+    ASSERT_EQ(length.value(), 12345);
 }
 
 TEST(findContentLength, NoContentLength) {
-    // code here
+    std::string_view resp = "HTTP/1.1 200 OK\r\n"
+                            "Content-Type: text/html\r\n"
+                            "\r\n"
+                            "<body>...</body>";
+    std::optional<size_t> length = findContentLength(resp);
+    ASSERT_FALSE(length.has_value());
+}
+
+TEST(findContentLength, ContentLengthCaseInsensitive) {
+    std::string_view resp = "HTTP/1.1 200 OK\r\n"
+                            "content-length: 12345\r\n"
+                            "\r\n";
+    std::optional<size_t> length = findContentLength(resp);
+    ASSERT_TRUE(length.has_value());
+    ASSERT_EQ(length.value(), 12345);
+
+    std::string_view resp_mixed = "HTTP/1.1 200 OK\r\n"
+                                  "ContEnT-LenGtH: 6789\r\n"
+                                  "\r\n";
+    length = findContentLength(resp_mixed);
+    ASSERT_TRUE(length.has_value());
+    ASSERT_EQ(length.value(), 6789);
+}
+
+TEST(findContentLength, InvalidContentLengthValue) {
+    std::string_view resp_invalid = "HTTP/1.1 200 OK\r\n"
+                                    "Content-Length: abc\r\n"
+                                    "\r\n";
+    std::optional<size_t> length = findContentLength(resp_invalid);
+    ASSERT_FALSE(length.has_value());
+
+    std::string_view rsp_part_num = "HTTP/1.1 200 OK\r\n"
+                                    "Content-Length: 123abc\r\n"
+                                    "\r\n";
+    length = findContentLength(rsp_part_num);
+    ASSERT_FALSE(length.has_value());
+}
+
+TEST(findContentLength, OnlyStatusLine) {
+    std::string_view resp = "HTTP/1.1 200 OK\r\n\r\n";
+    std::optional<size_t> length = findContentLength(resp);
+    ASSERT_FALSE(length.has_value());
+}
+
+TEST(findContentLength, EmptyResponse) {
+    std::string_view resp = "";
+    std::optional<size_t> length = findContentLength(resp);
+    ASSERT_FALSE(length.has_value());
 }
