@@ -29,8 +29,8 @@ awaitable<void> session(tcp::socket client_socket, io_service &io_service) {
         co_await async_read_until(client_socket, client_buffer, delimiter, use_awaitable);
 
         auto client_data = client_buffer.data();
-        std::string_view client_req(boost::asio::buffer_cast<const char *>(client_data),
-                                    boost::asio::buffer_size(client_data));
+        std::string client_req(boost::asio::buffer_cast<const char *>(client_data),
+                               boost::asio::buffer_size(client_data));
 
         auto [host, port] = findHostPort(client_req);
         if (host.empty()) {
@@ -44,14 +44,14 @@ awaitable<void> session(tcp::socket client_socket, io_service &io_service) {
         tcp::socket server_socket(io_service);
         co_await boost::asio::async_connect(server_socket, endpoints, use_awaitable);
 
-        co_await async_write(server_socket, client_data, use_awaitable);
+        co_await async_write(server_socket, boost::asio::buffer(client_req), use_awaitable);
 
         boost::asio::streambuf server_buffer;
         co_await async_read_until(server_socket, server_buffer, delimiter, use_awaitable);
 
         auto server_data = server_buffer.data();
         size_t response_size = boost::asio::buffer_size(server_data);
-        std::string_view server_rsp(boost::asio::buffer_cast<const char *>(server_data), response_size);
+        std::string server_rsp(boost::asio::buffer_cast<const char *>(server_data), response_size);
 
         size_t headers_end = server_rsp.find(delimiter);
         if (headers_end == std::string::npos) {
@@ -65,7 +65,7 @@ awaitable<void> session(tcp::socket client_socket, io_service &io_service) {
             co_return;
         }
 
-        co_await async_write(client_socket, server_data, use_awaitable);
+        co_await async_write(client_socket, boost::asio::buffer(server_rsp), use_awaitable);
 
         size_t transferred = response_size - (headers_end + delimiter.length());
         std::array<char, chunk_size> temp_buffer;
