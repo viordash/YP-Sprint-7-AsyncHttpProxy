@@ -47,11 +47,11 @@ awaitable<void> session(tcp::socket client_socket, io_service &io_service) {
         co_await async_write(server_socket, client_data, use_awaitable);
 
         boost::asio::streambuf server_buffer;
-        size_t response_size = co_await async_read_until(server_socket, server_buffer, delimiter, use_awaitable);
+        co_await async_read_until(server_socket, server_buffer, delimiter, use_awaitable);
 
         auto server_data = server_buffer.data();
-        std::string_view server_rsp(boost::asio::buffer_cast<const char *>(server_data),
-                                    boost::asio::buffer_size(server_data));
+        size_t response_size = boost::asio::buffer_size(server_data);
+        std::string_view server_rsp(boost::asio::buffer_cast<const char *>(server_data), response_size);
 
         size_t headers_end = server_rsp.find(delimiter);
         if (headers_end == std::string::npos) {
