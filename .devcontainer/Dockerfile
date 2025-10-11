@@ -1,10 +1,8 @@
 FROM ubuntu@sha256:79efa276fdefa2ee3911db29b0608f8c0561c347ec3f4d4139980d43b168d991
 
 # Update the package database and install required tools
-RUN apt-get clean
-RUN apt-get update
-RUN apt-get --fix-broken install
-RUN apt-get install -y python3 python3-pip pipx git less vim \
+RUN apt update
+RUN apt install -y python3 python3-pip pipx git less vim \
     sudo cmake make g++-15 libjemalloc-dev clang-format clangd-19 \
     gnuplot net-tools libasio-dev libboost-all-dev libgtest-dev \
     netcat-traditional wget
@@ -22,9 +20,6 @@ RUN useradd -ms /bin/bash dev \
 USER dev
 
 RUN git config --global core.editor code
-
-RUN git config --global user.name "Vitalii Orazov"
-RUN git config --global user.email "viordash@yandex.ru"
 
 # Set the default command
 CMD ["/bin/bash"]
