@@ -9,7 +9,7 @@
             "request": "launch",
             "name": "Launch App",
             "program": "${workspaceFolder}/build/AsyncHttpProxy",
-            "args": [],
+            "args": ["5555"],
             "cwd": "${workspaceFolder}/build",
             "preLaunchTask": "build",
             "initCommands": [
