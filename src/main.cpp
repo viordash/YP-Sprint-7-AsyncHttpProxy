@@ -8,24 +8,81 @@
 #include <boost/asio/use_awaitable.hpp>
 
 #include <iostream>
+#include <ostream>
 #include <string_view>
 
 using boost::asio::async_read_until;
 using boost::asio::awaitable;
-using boost::asio::buffer;
 using boost::asio::co_spawn;
-using boost::asio::dynamic_buffer;
 using boost::asio::io_service;
-using boost::asio::transfer_at_least;
 using boost::asio::use_awaitable;
 using boost::asio::ip::tcp;
 using boost::system::error_code;
 
 constexpr std::string_view delimiter = "\r\n\r\n";
+constexpr size_t chunk_size = 4096;
 
 awaitable<void> session(tcp::socket client_socket, io_service &io_service) {
-    co_return;
-    // code here
+    try {
+        boost::asio::streambuf client_buffer;
+        co_await async_read_until(client_socket, client_buffer, delimiter, use_awaitable);
+
+        auto client_data = client_buffer.data();
+        std::string_view client_req(boost::asio::buffer_cast<const char *>(client_data),
+                                    boost::asio::buffer_size(client_data));
+
+        auto [host, port] = findHostPort(client_req);
+        if (host.empty()) {
+            std::cerr << "'Host' header is empty" << std::endl;
+            co_return;
+        }
+
+        tcp::resolver resolver(io_service);
+        auto endpoints = co_await resolver.async_resolve(host, port, use_awaitable);
+
+        tcp::socket server_socket(io_service);
+        co_await boost::asio::async_connect(server_socket, endpoints, use_awaitable);
+
+        co_await async_write(server_socket, client_data, use_awaitable);
+
+        boost::asio::streambuf server_buffer;
+        size_t response_size = co_await async_read_until(server_socket, server_buffer, delimiter, use_awaitable);
+
+        auto server_data = server_buffer.data();
+        std::string_view server_rsp(boost::asio::buffer_cast<const char *>(server_data),
+                                    boost::asio::buffer_size(server_data));
+
+        size_t headers_end = server_rsp.find(delimiter);
+        if (headers_end == std::string::npos) {
+            std::cerr << "No header delimiter found" << std::endl;
+            co_return;
+        }
+
+        auto content_length = findContentLength(server_rsp);
+        if (!content_length.has_value()) {
+            std::cerr << "'Content Length' header is empty" << std::endl;
+            co_return;
+        }
+
+        co_await async_write(client_socket, server_data, use_awaitable);
+
+        size_t transferred = response_size - headers_end + delimiter.length();
+        std::array<char, chunk_size> temp_buffer;
+        while (transferred < content_length.value()) {
+            size_t to_read = std::min(content_length.value() - transferred, chunk_size);
+
+            size_t read_count =
+                co_await server_socket.async_read_some(boost::asio::buffer(temp_buffer.data(), to_read), use_awaitable);
+            if (read_count == 0) {
+                break;
+            }
+            co_await async_write(client_socket, boost::asio::buffer(temp_buffer.data(), read_count), use_awaitable);
+            transferred += read_count;
+        }
+
+    } catch (const std::exception &e) {
+        std::cerr << "Session error: " << e.what() << std::endl;
+    }
 }
 
 class Server {
