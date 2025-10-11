@@ -71,8 +71,8 @@ awaitable<void> session(tcp::socket client_socket, io_service &io_service) {
         while (transferred < content_length.value()) {
             size_t to_read = std::min(content_length.value() - transferred, chunk_size);
 
-            size_t read_count =
-                co_await server_socket.async_read_some(boost::asio::buffer(temp_buffer.data(), to_read), use_awaitable);
+            size_t read_count = co_await async_read(server_socket, boost::asio::buffer(temp_buffer.data(), to_read),
+                                                    boost::asio::transfer_at_least(to_read), use_awaitable);
             if (read_count == 0) {
                 break;
             }
