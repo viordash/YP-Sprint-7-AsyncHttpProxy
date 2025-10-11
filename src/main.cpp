@@ -9,6 +9,7 @@
 
 #include <iostream>
 #include <ostream>
+#include <print>
 #include <string_view>
 
 using boost::asio::async_read_until;
@@ -33,7 +34,7 @@ awaitable<void> session(tcp::socket client_socket, io_service &io_service) {
 
         auto [host, port] = findHostPort(client_req);
         if (host.empty()) {
-            std::cerr << "'Host' header is empty" << std::endl;
+            std::println(stderr, "'Host' header is empty");
             co_return;
         }
 
@@ -54,13 +55,13 @@ awaitable<void> session(tcp::socket client_socket, io_service &io_service) {
 
         size_t headers_end = server_rsp.find(delimiter);
         if (headers_end == std::string::npos) {
-            std::cerr << "No header delimiter found" << std::endl;
+            std::println(stderr, "No header delimiter found");
             co_return;
         }
 
         auto content_length = findContentLength(server_rsp);
         if (!content_length.has_value()) {
-            std::cerr << "'Content Length' header is empty" << std::endl;
+            std::println(stderr, "'Content Length' header is empty");
             co_return;
         }
 
@@ -81,7 +82,7 @@ awaitable<void> session(tcp::socket client_socket, io_service &io_service) {
         }
 
     } catch (const std::exception &e) {
-        std::cerr << "Session error: " << e.what() << std::endl;
+        std::println(stderr, "Session error: {}", e.what());
     }
 }
 
