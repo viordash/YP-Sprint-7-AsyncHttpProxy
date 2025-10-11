@@ -60,7 +60,7 @@ std::pair<std::string, std::string> findHostPort(std::string_view req) {
     std::string port = "80";
 
     iterHeaders(req, [&](std::string_view name, std::string_view value) {
-        if (name.length() != 4 && !compareStrings(name, "Host")) {
+        if (!compareStrings(name, "Host")) {
             return;
         }
 
@@ -80,7 +80,7 @@ std::optional<size_t> findContentLength(std::string_view rsp) {
     std::optional<size_t> content_len;
 
     iterHeaders(rsp, [&](std::string_view name, std::string_view value) {
-        if (name.length() != 4 && !compareStrings(name, "Content-Length")) {
+        if (!compareStrings(name, "Content-Length")) {
             return;
         }
 
