@@ -67,7 +67,7 @@ awaitable<void> session(tcp::socket client_socket, io_service &io_service) {
 
         co_await async_write(client_socket, server_data, use_awaitable);
 
-        size_t transferred = response_size - headers_end + delimiter.length();
+        size_t transferred = response_size - (headers_end + delimiter.length());
         std::array<char, chunk_size> temp_buffer;
         while (transferred < content_length.value()) {
             size_t to_read = std::min(content_length.value() - transferred, chunk_size);
