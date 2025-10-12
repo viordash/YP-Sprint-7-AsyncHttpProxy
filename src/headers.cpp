@@ -28,12 +28,12 @@ static bool compareStrings(const std::string_view s1, const std::string_view s2)
 }
 
 void iterHeaders(std::string_view req, Callback &&callback) {
-    size_t request_delimeter = req.find("\r\n");
-    if (request_delimeter == std::string_view::npos) {
+    size_t request_delimiter = req.find("\r\n");
+    if (request_delimiter == std::string_view::npos) {
         return;
     }
 
-    std::string_view headers = req.substr(request_delimeter + 2);
+    std::string_view headers = req.substr(request_delimiter + 2);
 
     for (auto line_range : headers | std::views::split("\r\n"sv)) {
         std::string_view line(line_range.begin(), line_range.end());
