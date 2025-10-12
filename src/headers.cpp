@@ -76,6 +76,7 @@ std::pair<std::string, std::string> findHostPort(std::string_view req) {
     return {host_name, port};
 }
 
+constexpr size_t max_content_length = (1 * 1024 * 1024 * 1024);
 std::optional<size_t> findContentLength(std::string_view rsp) {
     std::optional<size_t> content_len;
 
@@ -87,7 +88,7 @@ std::optional<size_t> findContentLength(std::string_view rsp) {
         size_t len = 0;
         auto [ptr, ec] = std::from_chars(value.data(), value.data() + value.size(), len);
 
-        if (ec == std::errc() && ptr == value.data() + value.size()) {
+        if (ec == std::errc() && ptr == value.data() + value.size() && len <= max_content_length) {
             content_len = len;
         }
     });
