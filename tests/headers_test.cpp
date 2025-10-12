@@ -219,6 +219,23 @@ TEST(findContentLength, InvalidContentLengthValue) {
     ASSERT_FALSE(length.has_value());
 }
 
+TEST(findContentLength, MaxContentLengthLimit) {
+    std::string_view resp = "HTTP/1.1 200 OK\r\n"
+                            "Content-Length: 1073741824\r\n"
+                            "\r\n"
+                            "<body>...</body>";
+    std::optional<size_t> length = findContentLength(resp);
+    ASSERT_TRUE(length.has_value());
+    ASSERT_EQ(length.value(), 1073741824);
+
+    std::string_view resp_over = "HTTP/1.1 200 OK\r\n"
+                            "Content-Length: 1073741825\r\n"
+                            "\r\n"
+                            "<body>...</body>";
+    length = findContentLength(resp_over);
+    ASSERT_FALSE(length.has_value());
+}
+
 TEST(findContentLength, OnlyStatusLine) {
     std::string_view resp = "HTTP/1.1 200 OK\r\n\r\n";
     std::optional<size_t> length = findContentLength(resp);
